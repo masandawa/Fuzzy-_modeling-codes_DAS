@@ -4,6 +4,8 @@
 %  of Soil-Transmitted Helminth and Malaria Co-infection under Parameter
 %  Uncertainty".
 %  Standalone script: running it produces one figure (Fig04_Sensitivity.png).
+%  Bars are drawn on a signed logarithmic axis so that small indices
+%  (e.g. d_m) are visible; tick labels give the true index values.
 %  Tested in MATLAB-compatible syntax (also runs in GNU Octave >= 6).
 %% =====================================================================
 clear; close all; clc;
@@ -54,18 +56,35 @@ namesW = {'\beta_{sw}','\theta_w','\Lambda_h','\phi_e','\psi_e','\phi_a','\alpha
 valsW  = [0.5, 0.5, 0.5, 0.5*P.pse/k5, -0.5*P.pse/k5, -0.5, -0.5*P.als/k2, -0.5*(1+P.mu/k2)];
 fprintf('R0m indices:\n'); for i=1:numel(valsM), fprintf('  %-10s % .4f\n',namesM{i},valsM(i)); end
 fprintf('R0w indices:\n'); for i=1:numel(valsW), fprintf('  %-10s % .4f\n',namesW{i},valsW(i)); end
+%% ---------------- Plot on a signed logarithmic scale ----------------
+% d_m has index -0.0011, too small to see on a linear axis. Bar heights use
+% the transform T(v) = sign(v)*log10(1+|v|/c), which is linear near zero and
+% logarithmic for larger |v|; tick labels show the true values.
+c    = 1e-3;                                   % linear-to-log transition
+T    = @(v) sign(v).*log10(1+abs(v)/c);
+tkv  = [-0.5 -0.1 -0.01 -0.001 0 0.001 0.01 0.1 0.5];   % true tick values
+tkl  = {'-0.5','-0.1','-0.01','-0.001','0','0.001','0.01','0.1','0.5'};
+ymax = T(0.9);
 figure('Color','w','Units','centimeters','Position',[2 2 26 10]);
 dat = {valsM, valsW}; nm = {namesM, namesW};
 ttl = {'(a) Sensitivity of \it{R}\rm_{0m}','(b) Sensitivity of \it{R}\rm_{0w}'};
 for pnl = 1:2
-    subplot(1,2,pnl); hold on; box on; grid on;
+    subplot(1,2,pnl); hold on; box on;
     v = dat{pnl};
-    for i = 1:numel(v)
-        if v(i) >= 0, c = [0.00 0.35 0.70]; else, c = [0.80 0.15 0.15]; end
-        fill([i-0.32 i+0.32 i+0.32 i-0.32],[0 0 v(i) v(i)], c, 'EdgeColor', 'none');
+    for k = 1:numel(tkv)                       % horizontal grid at true ticks
+        plot([0 numel(v)+1],[T(tkv(k)) T(tkv(k))],'-','Color',[0.88 0.88 0.88]);
     end
-    set(gca,'XTick',1:numel(v),'XTickLabel',nm{pnl},'FontSize',10); ylim([-0.65 0.65]);
-    plot([0 numel(v)+1],[0 0],'k-'); xlim([0.3 numel(v)+0.7]);
-    ylabel('Sensitivity index \Upsilon_p'); title(ttl{pnl},'FontWeight','normal');
+    for i = 1:numel(v)
+        if v(i) >= 0, col = [0.00 0.35 0.70]; 
+        else,         col = [0.80 0.15 0.15];  end
+        h = T(v(i));
+        fill([i-0.32 i+0.32 i+0.32 i-0.32],[0 0 h h], col, 'EdgeColor', 'none');
+    end
+    plot([0 numel(v)+1],[0 0],'k-');
+    set(gca,'XTick',1:numel(v),'XTickLabel',nm{pnl},'FontSize',10, ...
+        'YTick',T(tkv),'YTickLabel',tkl,'Layer','top');
+    xlim([0.3 numel(v)+0.7]); ylim([-ymax ymax]);
+    ylabel('Sensitivity index \Upsilon_p (signed log scale)');
+    title(ttl{pnl},'FontWeight','normal');
 end
 print(gcf,'Fig04_Sensitivity','-dpng','-r300'); fprintf('Figure saved as Fig04_Sensitivity.png\n');
